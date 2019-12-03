@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-
 void main() => runApp(AttendanceTracker());
 
 class AttendanceTracker extends StatelessWidget {
@@ -17,9 +16,8 @@ class AttendanceTracker extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
         home: new ATLoginPage(),
-        routes: <String, WidgetBuilder> {
-          '/landingPage' : (context) => landingPage(),
-          '/atQRScanner' : (context) => atQRScanner()
+        routes: <String, WidgetBuilder>{
+          '/landingPage': (context) => landingPage(),
         },
         theme: new ThemeData(primarySwatch: Colors.blue));
   }
@@ -40,19 +38,24 @@ class ATLoginPageState extends State<ATLoginPage> {
 
   signIn(String email, password) async {
     var jsonData = null;
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance(); 
-    var response = await http.post("https://attendance.page/api.php?type=0&student="+email+"&password="+password);
-    if(response.statusCode == 200)
-    {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    sharedPreferences.setString("email", email); 
+    var response = await http.post(
+        "https://attendance.page/api.php?type=0&student=" +
+            email +
+            "&password=" +
+            password);
+    if (response.body == "{\"status\":\"success\"}") {
       jsonData = json.decode(response.body);
       setState(() {
-        _isLoading = false; 
-        sharedPreferences.setString("token", jsonData['token']); 
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (BuildContext context) => landingPage()), (Route<dynamic> route) => false);
-      }); 
-    }
-    else{
-      print(response.body); 
+        _isLoading = false;
+        sharedPreferences.setString("token", "a");
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (BuildContext context) => landingPage()),
+            (Route<dynamic> route) => false);
+      });
+    } else {
+      print(response.body);
     }
   }
 
@@ -76,7 +79,7 @@ class ATLoginPageState extends State<ATLoginPage> {
                 margin: EdgeInsets.only(top: 220.0),
                 child: Image(
                   image: AssetImage("assets/t-logo.png"),
-                  height: 150.0,
+                  height: 148.0,
                   width: 150.0,
                 ),
               ),
@@ -112,7 +115,7 @@ class ATLoginPageState extends State<ATLoginPage> {
 
                       Padding(padding: const EdgeInsets.only(top: 20.0)),
                       MaterialButton(
-                        height: 40.0,
+                        height: 38.0,
                         minWidth: 100.0,
                         color: Colors.blue,
                         textColor: Colors.white,
@@ -138,7 +141,6 @@ class ATLoginPageState extends State<ATLoginPage> {
 }
 
 class landingPage extends StatefulWidget {
-  
   @override
   _landingPageState createState() => _landingPageState();
 }
@@ -146,11 +148,24 @@ class landingPage extends StatefulWidget {
 class _landingPageState extends State<landingPage> {
   String barcode = '';
   Uint8List bytes = Uint8List(200);
-  SharedPreferences sharedPreferences; 
+  SharedPreferences sharedPreferences;
 
   Future _scan() async {
-    String barcode = await scanner.scan();
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    String email = sharedPreferences.getString("email");
+    var now = DateTime.now();
+    String dateTime = now.toString();  
+    var barcode = await scanner.scan();
     setState(() => this.barcode = barcode);
+    var response = await http.post("https://attendance.page/api.php?type=2&class=5dd19bd5c9ce7&student="+email+"&seat="+barcode+"&time="+dateTime); 
+    print(dateTime); 
+    if (response.body == "{\"status\":\"success\"}")
+    {
+      print("Success"); 
+    }
+    else{
+      print("Error"); 
+    }
   }
 
   @override
@@ -160,31 +175,32 @@ class _landingPageState extends State<landingPage> {
   }
 
   checkLoginStatus() async {
-    sharedPreferences = await SharedPreferences.getInstance(); 
-    if(sharedPreferences.getString("token") == null)
-    {
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (BuildContext context) => ATLoginPage()), (Route<dynamic> route) => false);
+    sharedPreferences = await SharedPreferences.getInstance();
+    if (sharedPreferences.getString("token") == null) {
+      Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (BuildContext context) => ATLoginPage()),
+          (Route<dynamic> route) => false);
     }
   }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) { 
     return Scaffold(
       appBar: AppBar(
         title: Text("Welcome User"),
         actions: <Widget>[
           FlatButton(
             onPressed: () {
-              sharedPreferences.clear(); 
-              sharedPreferences.commit(); 
+              sharedPreferences.clear();
+              sharedPreferences.commit();
             },
             child: Text("Log Out", style: TextStyle(color: Colors.white)),
           ),
         ],
-        ),
+      ),
       body: Column(
         children: <Widget>[
-
-           Center(
+          Center(
             child: Container(
               margin: EdgeInsets.only(top: 250.0),
               child: MaterialButton(
@@ -195,7 +211,6 @@ class _landingPageState extends State<landingPage> {
               ),
             ),
           ),
-
           Center(
             child: Container(
               margin: EdgeInsets.all(10.0),
@@ -207,49 +222,9 @@ class _landingPageState extends State<landingPage> {
               ),
             ),
           ),
-
         ],
       ),
     );
   }
 }
 
-class atQRScanner extends StatefulWidget {
-   
-  @override
-  _atQRScannerState createState() => _atQRScannerState();
-}
-
-class _atQRScannerState extends State<atQRScanner> {
-  
-  String barcode = '';
-  Uint8List bytes = Uint8List(200);
-
-  @override
-  initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context){
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("QR Scanner"),
-      ),
-      body: Center(
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: Icon(Icons.camera_alt),
-        label: Text("Scan"), 
-        onPressed: _scan,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
-
-
-  Future _scan() async {
-    String barcode = await scanner.scan();
-    setState(() => this.barcode = barcode);
-  }
-}
