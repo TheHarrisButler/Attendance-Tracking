@@ -147,6 +147,7 @@ class landingPage extends StatefulWidget {
 
 class _landingPageState extends State<landingPage> {
   String barcode = '';
+  String barcode1 = '';
   Uint8List bytes = Uint8List(200);
   SharedPreferences sharedPreferences;
 
@@ -154,18 +155,32 @@ class _landingPageState extends State<landingPage> {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     String email = sharedPreferences.getString("email");
     var now = DateTime.now();
-    String dateTime = now.toString();  
+    String dateTime = now.toString();
+
     var barcode = await scanner.scan();
     setState(() => this.barcode = barcode);
-    var response = await http.post("https://attendance.page/api.php?type=2&class=5dd19bd5c9ce7&student="+email+"&seat="+barcode+"&time="+dateTime); 
-    print(dateTime); 
-    if (response.body == "{\"status\":\"success\"}")
+    var response1 = await http.post("https://attendance.page/api.php?type=1&class="+ barcode +"&student=" + email);
+
+    if (response1.body == "{\"status\":\"success\"}")
     {
-      print("Success"); 
+      print("Success");
+      
+      var barcode1 = await scanner.scan();
+      setState(() => this.barcode1 = barcode1);
+      var response = await http.post("https://attendance.page/api.php?type=2&class="+ barcode +"&student="+ email +"&seat="+ barcode1 +"&time="+ dateTime); 
+    
+      if (response.body == "{\"status\":\"success\"}"){
+        print("Success"); 
+      }
+      else{
+        print("Error"); 
+      } 
     }
     else{
       print("Error"); 
     }
+
+    
   }
 
   @override
