@@ -240,4 +240,3 @@ class _landingPageState extends State<landingPage> {
     );
   }
 }
-
